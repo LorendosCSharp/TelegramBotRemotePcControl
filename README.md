@@ -45,7 +45,7 @@ Before using this bot, make sure you have the following set up:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/TelegramBotRemotePcControl.git
+   git clone https://github.com/LorendosCSharp/TelegramBotRemotePcControl.git
    cd TelegramBotRemotePcControl
    ```
 
