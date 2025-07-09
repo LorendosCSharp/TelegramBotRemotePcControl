@@ -1,4 +1,3 @@
-```markdown
 # TelegramBotRemotePcControl
 
 > Control your PC remotely through a Telegram bot — simple, secure, and efficient.
@@ -23,7 +22,6 @@ Before using this bot, make sure you have the following set up:
 
    ```bash
    pip install -r req.txt
-   ```
 
 2. **Create a `.env` file**
 
