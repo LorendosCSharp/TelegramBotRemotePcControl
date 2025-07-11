@@ -2,7 +2,6 @@ from dotenv import load_dotenv
 import os
 import json
 import tempfile
-import asyncio
 from typing import Final
 
 from telegram import (
@@ -28,15 +27,15 @@ TOKEN: Final = os.getenv('TOKEN')
 BOT_USERNAME: Final = os.getenv('BOT_USERNAME')
 
 #region Constants
-MOVIE_MENU_NAME = "\u2605 \u2605 \u2605   M  O  V  I  E   \u2605 \u2605 \u2605"
-PC_MENU_NAME = "\u2605 \u2605 \u2605   PC   \u2605 \u2605 \u2605"
+MOVIE_MENU_NAME = "★ ★ ★   M  O  V  I  E   ★ ★ ★"
+PC_MENU_NAME = "★ ★ ★   PC   ★ ★ ★"
 
 # Movie mode buttons
-PAUSE_UNPAUSE_BUTTON = "\u23EF\uFE0F"
-VOLUME_UP_BUTTON = "\U0001F50A"
-VOLUME_DOWN_BUTTON = "\U0001F509"
-VOLUME_MUTE_BUTTON = "\U0001F507"
-FULL_UNFULL_SCREEN_BUTTON = "\U0001F4FA"
+PAUSE_UNPAUSE_BUTTON="⏯️"
+VOLUME_UP_BUTTON="🔊"
+VOLUME_DOWN_BUTTON="🔈"
+VOLUME_MUTE_BUTTON="🔇"
+FULL_UNFULL_SCREEN_BUTTON="📺"
 
 MOVIE_INLINEKEYBOARD = InlineKeyboardMarkup([
     [
@@ -51,13 +50,13 @@ MOVIE_INLINEKEYBOARD = InlineKeyboardMarkup([
 ])
 
 # PC mode buttons
-SYSTEM_VOLUME_UP_BUTTON = "\U0001F50A"
-SYSTEM_VOLUME_DOWN_BUTTON = "\U0001F509"
-SYSTEM_VOLUME_MUTE_BUTTON = "\U0001F507"
-SYSTEM_SHUTDOWN_BUTTON = "\u274C\u26A1\u274C"
-SYSTEM_REBOOT_BUTTON = "\U0001F501"
-SYSTEM_LOCK_BUTTON = "\U0001F512"
-GET_SCREENSHOT_BUTTON = "\U0001F4FA"
+SYSTEM_VOLUME_UP_BUTTON="🔊"
+SYSTEM_VOLUME_DOWN_BUTTON="🔈"
+SYSTEM_VOLUME_MUTE_BUTTON="🔇"
+SYSTEM_SHUTDOWN_BUTTON="❌⚡❌"
+SYSTEM_REBOOT_BUTTON="🔄"
+SYSTEM_LOCK_BUTTON="🔒"
+GET_SCREENSHOT_BUTTON="📺"
 
 PC_INLINEKEYBOARD = InlineKeyboardMarkup([
     [
