@@ -1,118 +1,181 @@
 from dotenv import load_dotenv
 import os
-from typing import Final
 import json
-from telegram import Update,InlineKeyboardMarkup,InlineKeyboardButton
-from telegram.ext import Application,CommandHandler,MessageHandler,filters,ContextTypes,CallbackQueryHandler
-from pynput.keyboard import Controller, Key
+import tempfile
+import asyncio
+from typing import Final
 
-#Gets essential vars from env file ; NEEDS TO CONTAIN THESE VARS
+from telegram import (
+    Update,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    filters,
+    ContextTypes,
+)
+import keyboard as kb
+import mss
+import mss.tools
+
+# Load environment variables
 load_dotenv()
-TOKEN:Final = os.getenv('TOKEN')
-BOT_USERNAME:Final = os.getenv('BOT_USERNAME')
+TOKEN: Final = os.getenv('TOKEN')
+BOT_USERNAME: Final = os.getenv('BOT_USERNAME')
 
-kb = Controller()
+#region Constants
+MOVIE_MENU_NAME = "\u2605 \u2605 \u2605   M  O  V  I  E   \u2605 \u2605 \u2605"
+PC_MENU_NAME = "\u2605 \u2605 \u2605   PC   \u2605 \u2605 \u2605"
 
-#Variable for Movie Mode
-MOVIE_MENU_NAME="★ ★ ★   M  O  V  I  E   ★ ★ ★"
+# Movie mode buttons
+PAUSE_UNPAUSE_BUTTON = "\u23EF\uFE0F"
+VOLUME_UP_BUTTON = "\U0001F50A"
+VOLUME_DOWN_BUTTON = "\U0001F509"
+VOLUME_MUTE_BUTTON = "\U0001F507"
+FULL_UNFULL_SCREEN_BUTTON = "\U0001F4FA"
 
-#buttons
-PAUSE_UNPAUSE_BUTTON="⏯️"
-VOLUME_UP_BUTTON="🔊"
-VOLUME_DOWN_BUTTON="🔈"
-VOLUME_MUTE_BUTTON="🔇"
-FULL_UNFULL_SCREEN_BUTTON="📺"
-
-#Keyboard with the buttons
-MOVIE_INLINEKEYBOARD= InlineKeyboardMarkup([
-    [InlineKeyboardButton(PAUSE_UNPAUSE_BUTTON, callback_data=PAUSE_UNPAUSE_BUTTON),InlineKeyboardButton(FULL_UNFULL_SCREEN_BUTTON, callback_data=FULL_UNFULL_SCREEN_BUTTON)],
-    [InlineKeyboardButton(VOLUME_UP_BUTTON, callback_data=VOLUME_UP_BUTTON),InlineKeyboardButton(VOLUME_DOWN_BUTTON, callback_data=VOLUME_DOWN_BUTTON),InlineKeyboardButton(VOLUME_MUTE_BUTTON, callback_data=VOLUME_MUTE_BUTTON)]
+MOVIE_INLINEKEYBOARD = InlineKeyboardMarkup([
+    [
+        InlineKeyboardButton(PAUSE_UNPAUSE_BUTTON, callback_data=PAUSE_UNPAUSE_BUTTON),
+        InlineKeyboardButton(FULL_UNFULL_SCREEN_BUTTON, callback_data=FULL_UNFULL_SCREEN_BUTTON)
+    ],
+    [
+        InlineKeyboardButton(VOLUME_UP_BUTTON, callback_data=VOLUME_UP_BUTTON),
+        InlineKeyboardButton(VOLUME_DOWN_BUTTON, callback_data=VOLUME_DOWN_BUTTON),
+        InlineKeyboardButton(VOLUME_MUTE_BUTTON, callback_data=VOLUME_MUTE_BUTTON)
+    ]
 ])
 
-async def movie_mode_command(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(MOVIE_MENU_NAME,parse_mode="HTML",reply_markup=MOVIE_INLINEKEYBOARD)
+# PC mode buttons
+SYSTEM_VOLUME_UP_BUTTON = "\U0001F50A"
+SYSTEM_VOLUME_DOWN_BUTTON = "\U0001F509"
+SYSTEM_VOLUME_MUTE_BUTTON = "\U0001F507"
+SYSTEM_SHUTDOWN_BUTTON = "\u274C\u26A1\u274C"
+SYSTEM_REBOOT_BUTTON = "\U0001F501"
+SYSTEM_LOCK_BUTTON = "\U0001F512"
+GET_SCREENSHOT_BUTTON = "\U0001F4FA"
 
-def handle_respone(text:str)-> str:
+PC_INLINEKEYBOARD = InlineKeyboardMarkup([
+    [
+        InlineKeyboardButton(SYSTEM_VOLUME_UP_BUTTON, callback_data=SYSTEM_VOLUME_UP_BUTTON),
+        InlineKeyboardButton(SYSTEM_VOLUME_DOWN_BUTTON, callback_data=SYSTEM_VOLUME_DOWN_BUTTON),
+        InlineKeyboardButton(SYSTEM_VOLUME_MUTE_BUTTON, callback_data=SYSTEM_VOLUME_MUTE_BUTTON)
+    ],
+    [
+        InlineKeyboardButton(SYSTEM_SHUTDOWN_BUTTON, callback_data=SYSTEM_SHUTDOWN_BUTTON),
+        InlineKeyboardButton(SYSTEM_REBOOT_BUTTON, callback_data=SYSTEM_REBOOT_BUTTON)
+    ],
+    [InlineKeyboardButton(SYSTEM_LOCK_BUTTON, callback_data=SYSTEM_LOCK_BUTTON)],
+    [InlineKeyboardButton(GET_SCREENSHOT_BUTTON, callback_data=GET_SCREENSHOT_BUTTON)]
+])
+#endregion
 
-    processed:str=text.lower()
+#region Commands
+async def movie_mode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(MOVIE_MENU_NAME, reply_markup=MOVIE_INLINEKEYBOARD)
 
-    if "hello" in processed:
-        return "no helloski to you"
-    
-    return "beep boop"
+async def pc_mode_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(PC_MENU_NAME, reply_markup=PC_INLINEKEYBOARD)
 
-async def handle_message(update:Update,context:ContextTypes.DEFAULT_TYPE):
+async def killswitch_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("\u274C Bot shutting down")
+    os._exit(0)
 
-    message_type:str= update.message.chat.type
-    text:str = update.message.text
-    response:str=""
+#endregion
+
+#region Message Handlers
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_user_whitelisted(update.message.from_user.id):
         await update.message.reply_text("You are not in whitelist")
         return
-    
-    if message_type =="group":
-        if BOT_USERNAME in text:
-            new_text:str = text.replace(BOT_USERNAME,"").strip()
-            response = handle_respone(new_text)
-        else:
-            return
-    else:
-        response = handle_respone(text)
 
-    await update.message.reply_text(response)
+    await update.message.reply_text("\u2705 Use /movie or /pc to get started")
 
-async def handle_error(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    print(f"Update {update} caused error {context.error}")
+async def handle_keyboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+    menu_type = query.message.text
 
-async def handle_keyboard(update:Update,context:ContextTypes.DEFAULT_TYPE):
-    data:str = update.callback_query.data
-
-    if not is_user_whitelisted(update.callback_query.from_user.id):
-        await update.callback_query.answer("You are not in whitelist",show_alert=True)
+    if not is_user_whitelisted(query.from_user.id):
+        await query.answer("You are not in whitelist", show_alert=True)
         return
-    
-    if update.callback_query.message.text==MOVIE_MENU_NAME:
-        if data == VOLUME_DOWN_BUTTON:
-            press_and_release(Key.media_volume_down)
-        elif data == VOLUME_UP_BUTTON:
-            press_and_release(Key.media_volume_up)
-        elif data == VOLUME_MUTE_BUTTON:
-            press_and_release(Key.media_volume_mute)
-        elif data == FULL_UNFULL_SCREEN_BUTTON:
-            press_and_release('f')
-        elif data==PAUSE_UNPAUSE_BUTTON:
-            press_and_release(Key.space)
-        else :
-            print("incorrect data")
 
-    await update.callback_query.answer()
+    if menu_type == MOVIE_MENU_NAME:
+        key_map = {
+            VOLUME_DOWN_BUTTON: 'down',
+            VOLUME_UP_BUTTON: 'up',
+            VOLUME_MUTE_BUTTON: 'm',
+            FULL_UNFULL_SCREEN_BUTTON: 'f',
+            PAUSE_UNPAUSE_BUTTON: 'space'
+        }
+        if data in key_map:
+            kb.press_and_release(key_map[data])
 
-#help methods
-def is_user_whitelisted(userid: str, path='whitelist.json') -> bool:
+    elif menu_type == PC_MENU_NAME:
+        if data == SYSTEM_VOLUME_DOWN_BUTTON:
+            kb.press_and_release('volume down')
+        elif data == SYSTEM_VOLUME_UP_BUTTON:
+            kb.press_and_release('volume up')
+        elif data == SYSTEM_VOLUME_MUTE_BUTTON:
+            kb.press_and_release('volume mute')
+        elif data == SYSTEM_SHUTDOWN_BUTTON:
+            os.system("shutdown -t 0 -s -f")
+        elif data == SYSTEM_REBOOT_BUTTON:
+            os.system("shutdown -t 0 -r -f")
+        elif data == SYSTEM_LOCK_BUTTON:
+            os.system('rundll32.exe user32.dll,LockWorkStation')
+        elif data == GET_SCREENSHOT_BUTTON:
+            await capture_each_monitor_and_send(update, context)
+
+#endregion
+
+#region Screenshot
+async def capture_each_monitor_and_send(update, context):
+    with mss.mss() as sct:
+        for i, monitor in enumerate(sct.monitors[1:], start=1):
+            with tempfile.NamedTemporaryFile(suffix=f'_monitor{i}.png', delete=False) as tmpfile:
+                temp_path = tmpfile.name
+
+            try:
+                shot = sct.grab(monitor)
+                mss.tools.to_png(shot.rgb, shot.size, output=temp_path)
+
+                with open(temp_path, 'rb') as f:
+                    await context.bot.send_photo(update.effective_chat.id, photo=f)
+
+            finally:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+#endregion
+
+#region Utilities
+def is_user_whitelisted(userid: int, path='whitelist.json') -> bool:
     with open(path, 'r') as f:
-        json_unpacked = json.load(f)
-        whitelist = set(json_unpacked)
+        whitelist = set(json.load(f))
     return userid in whitelist
 
-def press_and_release(key):
-    kb.press(key)
-    kb.release(key)
+async def handle_error(update: object, context: ContextTypes.DEFAULT_TYPE):
+    print(f"Update {update} caused error {context.error}")
+#endregion
 
-if __name__=="__main__":
-    print("starting bot ..")
-
+#region Main
+if __name__ == "__main__":
     app = Application.builder().token(TOKEN).build()
 
-    #Commands
-    app.add_handler(CommandHandler("movie",movie_mode_command))
+    app.add_handler(CommandHandler("movie", movie_mode_command))
+    app.add_handler(CommandHandler("pc", pc_mode_command))
+    app.add_handler(CommandHandler("kill", killswitch_command))
 
-    #Messages
-    app.add_handler(MessageHandler(filters.TEXT,handle_message))
-
-    #Callbacks
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(CallbackQueryHandler(handle_keyboard))
 
-    #Errors
     app.add_error_handler(handle_error)
 
+    print("Bot running...")
     app.run_polling(poll_interval=1)
+#endregion
